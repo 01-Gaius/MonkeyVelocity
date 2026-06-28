@@ -509,7 +509,7 @@ local function createToggle(cfg)
     end)
 end
 
-createToggle({ name="AutoRebirth",    icon="⚡", label="Auto Rebirth",    desc="Rebirth automático ao atingir Lv.25",       gvar="AutoRebirth",    order=1 })
+createToggle({ name="AutoRebirth",    icon="⚡", label="Auto Rebirth",    desc="Rebirth automático ao atingir nivel necessário",       gvar="AutoRebirth",    order=1 })
 createToggle({ name="AutoAura",       icon="✨", label="Auto Aura",        desc="Compra e equipa a melhor Aura disponível",  gvar="AutoAura",       order=2 })
 createToggle({ name="AutoTrail",      icon="🌊", label="Auto Trail",       desc="Compra e equipa a melhor Trail disponível", gvar="AutoTrail",      order=3 })
 createToggle({ name="AutoMonkeyTail", icon="🐒", label="Auto Monkey Tail", desc="Compra e equipa a melhor Cauda de Macaco",  gvar="AutoMonkeyTail", order=4 })
@@ -621,4 +621,4 @@ task.spawn(function()
     end
 end)
 
-print("🔱 Titanium Hub v5 V2 carregado!")
+print("🔱 Titanium Hub V2 carregado!")
