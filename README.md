@@ -1,8 +1,3 @@
---[[
-    🔱 Titanium Hub - +1 Fuga de Macaco de Velocidade
-    Criado com design premium, responsivo, minimizável e com automações completas.
-    Sem dependências externas para garantir compatibilidade com qualquer executor.
---]]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
