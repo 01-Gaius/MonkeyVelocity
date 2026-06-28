@@ -1,5 +1,5 @@
 -- 🔱 Titanium Hub | Speed Monkey Escape
--- v5 V2 — UI Definitiva
+-- V2 — UI Definitiva
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -52,7 +52,7 @@ pcall(function()
     targetParent = CoreGui
 end)
 if not targetParent then targetParent = PlayerGui end
-if targetParent:FindFirstChild("TitaniumV5") then targetParent.TitaniumV5:Destroy() end
+if targetParent:FindFirstChild("TitaniumV2") then targetParent.TitaniumV5:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name            = "TitaniumV5"
@@ -276,7 +276,7 @@ TitleGrad.Color = ColorSequence.new({
 newLabel(TitleBar, {
     Size           = UDim2.new(0,200,0,14),
     Position       = UDim2.new(0,64,0.5,2),
-    Text           = "Speed Monkey Escape  •  v5",
+    Text           = "Speed Monkey Escape  •  v2",
     TextColor3     = C.textDim,
     TextSize       = 10,
     Font           = Enum.Font.GothamMedium,
