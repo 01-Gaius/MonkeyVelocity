@@ -1,20 +1,16 @@
 -- 🔱 Titanium Hub | Speed Monkey Escape
--- v5 DEFINITIVE — UI redesenhada do zero, premium
+-- v5 V2 — UI Definitiva
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService      = game:GetService("TweenService")
 local UserInputService  = game:GetService("UserInputService")
 local CoreGui           = game:GetService("CoreGui")
-local RunService        = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 local Remotes     = ReplicatedStorage:WaitForChild("Remotes")
 
--- ══════════════════════════════════════════
--- CONFIGS
--- ══════════════════════════════════════════
 local AurasConfig = {
     ["Amber"]    = { Multi = 1.5,  Price = 5000            },
     ["Ice Cold"] = { Multi = 2,    Price = 150000          },
@@ -42,50 +38,10 @@ local MonkeyTailsConfig = {
 local REBIRTH_REQUIRED_LEVEL = 25
 local MAX_REBIRTHS           = 11
 
--- ══════════════════════════════════════════
--- ESTADOS
--- ══════════════════════════════════════════
 _G.AutoRebirth    = false
 _G.AutoAura       = false
 _G.AutoTrail      = false
 _G.AutoMonkeyTail = false
-_G.RemoteSpy      = false
-
--- ══════════════════════════════════════════
--- REMOTE SPY
--- ══════════════════════════════════════════
-local spyConns = {}
-local function startSpy()
-    local function log(t, r, args)
-        local p = {}
-        for i,v in ipairs(args) do
-            local ok,s = pcall(tostring,v)
-            p[i] = ok and s or "?"
-        end
-        print(("[RemoteSpy] [%s] %s | %s"):format(t, r:GetFullName(), table.concat(p,", ")))
-    end
-    local function hook(r)
-        if r:IsA("RemoteEvent") then
-            local c = r.OnClientEvent:Connect(function(...) if _G.RemoteSpy then log("Event",r,{...}) end end)
-            table.insert(spyConns,c)
-        elseif r:IsA("RemoteFunction") then
-            local old = r.OnClientInvoke
-            r.OnClientInvoke = function(...) if _G.RemoteSpy then log("Func",r,{...}) end if old then return old(...) end end
-        end
-    end
-    for _,v in ipairs(game:GetDescendants()) do
-        if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then hook(v) end
-    end
-    table.insert(spyConns, game.DescendantAdded:Connect(function(v)
-        if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then task.wait(0.1) hook(v) end
-    end))
-    print("[RemoteSpy] ✅ Ativo (F9)")
-end
-local function stopSpy()
-    for _,c in ipairs(spyConns) do if typeof(c)=="RBXScriptConnection" then c:Disconnect() end end
-    spyConns = {}
-    print("[RemoteSpy] ❌ Off")
-end
 
 -- ══════════════════════════════════════════
 -- GUI PARENT
@@ -126,36 +82,12 @@ local C = {
     redDim    = Color3.fromRGB(60, 15, 20),
 }
 
-local function tween(obj, t, props)
+local function tw(obj, t, props)
     TweenService:Create(obj, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
 end
 
 -- ══════════════════════════════════════════
--- DRAG (sem drift)
--- ══════════════════════════════════════════
-local function makeDraggable(handle, target)
-    local drag, start, origin = false, Vector3.new(), UDim2.new()
-    handle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            drag = true ; start = i.Position ; origin = target.Position
-        end
-    end)
-    handle.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            drag = false
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if not drag then return end
-        if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then
-            local d = i.Position - start
-            target.Position = UDim2.new(origin.X.Scale, origin.X.Offset+d.X, origin.Y.Scale, origin.Y.Offset+d.Y)
-        end
-    end)
-end
-
--- ══════════════════════════════════════════
--- HELPER: novo frame
+-- HELPERS
 -- ══════════════════════════════════════════
 local function newFrame(parent, props)
     local f = Instance.new("Frame")
@@ -178,7 +110,6 @@ local function corner(parent, r)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, r or 10)
     c.Parent = parent
-    return c
 end
 local function stroke(parent, col, thick)
     local s = Instance.new("UIStroke")
@@ -189,42 +120,65 @@ local function stroke(parent, col, thick)
 end
 
 -- ══════════════════════════════════════════
+-- DRAG (sem drift)
+-- ══════════════════════════════════════════
+local function makeDraggable(handle, target)
+    local drag, start, origin = false, Vector3.new(), UDim2.new()
+    handle.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            drag = true; start = i.Position; origin = target.Position
+        end
+    end)
+    handle.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            drag = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if not drag then return end
+        if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then
+            local d = i.Position - start
+            target.Position = UDim2.new(origin.X.Scale, origin.X.Offset+d.X, origin.Y.Scale, origin.Y.Offset+d.Y)
+        end
+    end)
+end
+
+-- ══════════════════════════════════════════
 -- MINI BUTTON
 -- ══════════════════════════════════════════
 local MiniBtn = Instance.new("TextButton")
-MiniBtn.Size              = UDim2.new(0, 54, 0, 54)
-MiniBtn.Position          = UDim2.new(0, 20, 0.5, -27)
-MiniBtn.BackgroundColor3  = C.bg
-MiniBtn.Text              = "🔱"
-MiniBtn.TextSize          = 24
-MiniBtn.Font              = Enum.Font.GothamBold
-MiniBtn.TextColor3        = C.accent
-MiniBtn.AutoButtonColor   = false
-MiniBtn.Visible           = false
-MiniBtn.ZIndex            = 20
-MiniBtn.Parent            = ScreenGui
+MiniBtn.Size             = UDim2.new(0, 54, 0, 54)
+MiniBtn.Position         = UDim2.new(0, 20, 0.5, -27)
+MiniBtn.BackgroundColor3 = C.bg
+MiniBtn.Text             = "🔱"
+MiniBtn.TextSize         = 24
+MiniBtn.Font             = Enum.Font.GothamBold
+MiniBtn.TextColor3       = C.accent
+MiniBtn.AutoButtonColor  = false
+MiniBtn.Visible          = false
+MiniBtn.ZIndex           = 20
+MiniBtn.Parent           = ScreenGui
 corner(MiniBtn, 14)
 local miniStroke = stroke(MiniBtn, C.accentDim, 1.5)
 
--- glow effect mini
 local miniGlow = Instance.new("ImageLabel", MiniBtn)
-miniGlow.Size              = UDim2.new(1.8,0,1.8,0)
-miniGlow.Position          = UDim2.new(-0.4,0,-0.4,0)
+miniGlow.Size                   = UDim2.new(1.8,0,1.8,0)
+miniGlow.Position               = UDim2.new(-0.4,0,-0.4,0)
 miniGlow.BackgroundTransparency = 1
-miniGlow.Image             = "rbxassetid://5028857084"
-miniGlow.ImageColor3       = C.accent
-miniGlow.ImageTransparency = 0.85
-miniGlow.ZIndex            = 19
+miniGlow.Image                  = "rbxassetid://5028857084"
+miniGlow.ImageColor3            = C.accent
+miniGlow.ImageTransparency      = 0.85
+miniGlow.ZIndex                 = 19
 
 MiniBtn.MouseEnter:Connect(function()
-    tween(MiniBtn, 0.15, {BackgroundColor3 = C.accentDim})
-    tween(miniStroke, 0.15, {Color = C.accent})
-    tween(miniGlow, 0.15, {ImageTransparency = 0.6})
+    tw(MiniBtn, 0.15, {BackgroundColor3 = C.accentDim})
+    tw(miniStroke, 0.15, {Color = C.accent})
+    tw(miniGlow, 0.15, {ImageTransparency = 0.6})
 end)
 MiniBtn.MouseLeave:Connect(function()
-    tween(MiniBtn, 0.15, {BackgroundColor3 = C.bg})
-    tween(miniStroke, 0.15, {Color = C.accentDim})
-    tween(miniGlow, 0.15, {ImageTransparency = 0.85})
+    tw(MiniBtn, 0.15, {BackgroundColor3 = C.bg})
+    tw(miniStroke, 0.15, {Color = C.accentDim})
+    tw(miniGlow, 0.15, {ImageTransparency = 0.85})
 end)
 makeDraggable(MiniBtn, MiniBtn)
 
@@ -233,90 +187,85 @@ makeDraggable(MiniBtn, MiniBtn)
 -- ══════════════════════════════════════════
 local Main = Instance.new("Frame")
 Main.Name             = "Main"
-Main.Size             = UDim2.new(0, 380, 0, 420)
-Main.Position         = UDim2.new(0, 120, 0.5, -210)
+Main.Size             = UDim2.new(0, 380, 0, 380)
+Main.Position         = UDim2.new(0, 120, 0.5, -190)
 Main.BackgroundColor3 = C.bg
 Main.BorderSizePixel  = 0
-Main.ClipsDescendants = false
+Main.ClipsDescendants = false   -- false: evita cortar filhos e não bloqueia input
 Main.ZIndex           = 5
 Main.Parent           = ScreenGui
 corner(Main, 16)
 stroke(Main, C.border, 1.5)
 
--- Drop shadow
-local Shadow = Instance.new("ImageLabel", Main)
-Shadow.Size               = UDim2.new(1, 60, 1, 60)
-Shadow.Position           = UDim2.new(0, -30, 0, -30)
-Shadow.BackgroundTransparency = 1
-Shadow.Image              = "rbxassetid://5028857084"
-Shadow.ImageColor3        = Color3.fromRGB(0, 0, 0)
-Shadow.ImageTransparency  = 0.55
-Shadow.ZIndex             = 4
-Shadow.Parent             = Main
+-- Clip interno separado (só o visual, não o input)
+local ClipInner = Instance.new("Frame", Main)
+ClipInner.Size             = UDim2.new(1,0,1,0)
+ClipInner.BackgroundColor3 = C.bg
+ClipInner.BorderSizePixel  = 0
+ClipInner.ZIndex           = 5
+ClipInner.ClipsDescendants = true
+corner(ClipInner, 16)
 
--- Background gradient
-local BgGrad = Instance.new("UIGradient", Main)
+local BgGrad = Instance.new("UIGradient", ClipInner)
 BgGrad.Color    = ColorSequence.new({
-    ColorSequenceKeypoint.new(0,   Color3.fromRGB(12, 12, 20)),
-    ColorSequenceKeypoint.new(1,   Color3.fromRGB(8,  8,  14)),
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(12,12,20)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(8,8,14)),
 })
 BgGrad.Rotation = 135
 
--- Top accent bar (animated width)
+-- Shadow
+local Shadow = Instance.new("ImageLabel", Main)
+Shadow.Size                   = UDim2.new(1,60,1,60)
+Shadow.Position               = UDim2.new(0,-30,0,-30)
+Shadow.BackgroundTransparency = 1
+Shadow.Image                  = "rbxassetid://5028857084"
+Shadow.ImageColor3            = Color3.fromRGB(0,0,0)
+Shadow.ImageTransparency      = 0.55
+Shadow.ZIndex                 = 4
+
+-- Top accent bar
 local TopBar = newFrame(Main, {
-    Size = UDim2.new(0, 0, 0, 2),
-    Position = UDim2.new(0.1, 0, 0, 0),
+    Size             = UDim2.new(0,0,0,2),
+    Position         = UDim2.new(0.1,0,0,0),
     BackgroundColor3 = C.accent,
-    ZIndex = 8,
+    ZIndex           = 10,
 })
 corner(TopBar, 2)
 local topGrad = Instance.new("UIGradient", TopBar)
 topGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0,   Color3.fromRGB(0, 150, 200)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 220, 255)),
-    ColorSequenceKeypoint.new(1,   Color3.fromRGB(0, 150, 200)),
+    ColorSequenceKeypoint.new(0,   Color3.fromRGB(0,150,200)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0,220,255)),
+    ColorSequenceKeypoint.new(1,   Color3.fromRGB(0,150,200)),
 })
--- animate top bar in
-task.delay(0.1, function()
-    tween(TopBar, 0.6, {Size = UDim2.new(0.8, 0, 0, 2)})
-end)
+task.delay(0.1, function() tw(TopBar, 0.6, {Size = UDim2.new(0.8,0,0,2)}) end)
 
 -- ══════════════════════════════════════════
 -- TITLE BAR
 -- ══════════════════════════════════════════
 local TitleBar = newFrame(Main, {
-    Size = UDim2.new(1, 0, 0, 60),
-    ZIndex = 8,
+    Size   = UDim2.new(1,0,0,60),
+    ZIndex = 9,
 })
 
--- icon bg
 local IconBg = Instance.new("Frame", TitleBar)
-IconBg.Size             = UDim2.new(0, 40, 0, 40)
-IconBg.Position         = UDim2.new(0, 16, 0.5, -20)
+IconBg.Size             = UDim2.new(0,40,0,40)
+IconBg.Position         = UDim2.new(0,16,0.5,-20)
 IconBg.BackgroundColor3 = C.accentDim
 IconBg.BorderSizePixel  = 0
-IconBg.ZIndex           = 9
+IconBg.ZIndex           = 10
 corner(IconBg, 10)
 stroke(IconBg, C.accent, 1)
+newLabel(IconBg, { Size=UDim2.new(1,0,1,0), Text="🔱", TextSize=20, Font=Enum.Font.GothamBold, ZIndex=11 })
 
-local IconLbl = newLabel(IconBg, {
-    Size = UDim2.new(1,0,1,0),
-    Text = "🔱",
-    TextSize = 20,
-    Font = Enum.Font.GothamBold,
-    ZIndex = 10,
-})
-
--- title
 local TitleLbl = newLabel(TitleBar, {
-    Size = UDim2.new(0, 120, 0, 22),
-    Position = UDim2.new(0, 64, 0.5, -22),
-    Text = "TITANIUM",
-    TextColor3 = C.accent,
-    TextSize = 16,
-    Font = Enum.Font.GothamBold,
+    Size           = UDim2.new(0,120,0,22),
+    Position       = UDim2.new(0,64,0.5,-22),
+    Text           = "TITANIUM",
+    TextColor3     = C.accent,
+    TextSize       = 16,
+    Font           = Enum.Font.GothamBold,
     TextXAlignment = Enum.TextXAlignment.Left,
-    ZIndex = 9,
+    ZIndex         = 10,
 })
 local TitleGrad = Instance.new("UIGradient", TitleLbl)
 TitleGrad.Color = ColorSequence.new({
@@ -324,290 +273,222 @@ TitleGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(0,160,200)),
 })
 
-local SubLbl = newLabel(TitleBar, {
-    Size = UDim2.new(0, 180, 0, 14),
-    Position = UDim2.new(0, 64, 0.5, 2),
-    Text = "Speed Monkey Escape  •  v5",
-    TextColor3 = C.textDim,
-    TextSize = 10,
-    Font = Enum.Font.GothamMedium,
+newLabel(TitleBar, {
+    Size           = UDim2.new(0,200,0,14),
+    Position       = UDim2.new(0,64,0.5,2),
+    Text           = "Speed Monkey Escape  •  v5",
+    TextColor3     = C.textDim,
+    TextSize       = 10,
+    Font           = Enum.Font.GothamMedium,
     TextXAlignment = Enum.TextXAlignment.Left,
-    ZIndex = 9,
+    ZIndex         = 10,
 })
 
--- badge
+-- Badge V2
 local Badge = Instance.new("Frame", TitleBar)
-Badge.Size             = UDim2.new(0, 72, 0, 20)
-Badge.Position         = UDim2.new(1, -120, 0.5, -10)
-Badge.BackgroundColor3 = Color3.fromRGB(0, 35, 50)
+Badge.Size             = UDim2.new(0,46,0,20)
+Badge.Position         = UDim2.new(1,-120,0.5,-10)
+Badge.BackgroundColor3 = Color3.fromRGB(0,35,50)
 Badge.BorderSizePixel  = 0
-Badge.ZIndex           = 9
+Badge.ZIndex           = 10
 corner(Badge, 6)
 stroke(Badge, C.accentDim, 1)
-local BadgeLbl = newLabel(Badge, {
-    Size = UDim2.new(1,0,1,0),
-    Text = "DEFINITIVE",
-    TextColor3 = C.accent,
-    TextSize = 9,
-    Font = Enum.Font.GothamBold,
-    ZIndex = 10,
-})
+newLabel(Badge, { Size=UDim2.new(1,0,1,0), Text="V2", TextColor3=C.accent, TextSize=10, Font=Enum.Font.GothamBold, ZIndex=11 })
 
--- close / minimize buttons
-local function makeIconBtn(parent, xOff, icon, bgCol, hoverCol, iconCol)
-    local Btn = Instance.new("TextButton", parent)
-    Btn.Size             = UDim2.new(0, 28, 0, 28)
-    Btn.Position         = UDim2.new(1, xOff, 0.5, -14)
-    Btn.BackgroundColor3 = bgCol
-    Btn.Text             = icon
-    Btn.TextSize         = 13
-    Btn.Font             = Enum.Font.GothamBold
-    Btn.TextColor3       = iconCol
-    Btn.AutoButtonColor  = false
-    Btn.ZIndex           = 10
-    corner(Btn, 7)
-    stroke(Btn, C.border, 1)
-    Btn.MouseEnter:Connect(function() tween(Btn, 0.1, {BackgroundColor3 = hoverCol}) end)
-    Btn.MouseLeave:Connect(function() tween(Btn, 0.1, {BackgroundColor3 = bgCol}) end)
-    return Btn
-end
+-- Minimize button
+local MinBtn2 = Instance.new("TextButton", TitleBar)
+MinBtn2.Size             = UDim2.new(0,28,0,28)
+MinBtn2.Position         = UDim2.new(1,-44,0.5,-14)
+MinBtn2.BackgroundColor3 = C.surface
+MinBtn2.Text             = "–"
+MinBtn2.TextSize         = 13
+MinBtn2.Font             = Enum.Font.GothamBold
+MinBtn2.TextColor3       = C.textMid
+MinBtn2.AutoButtonColor  = false
+MinBtn2.ZIndex           = 11
+corner(MinBtn2, 7)
+stroke(MinBtn2, C.border, 1)
+MinBtn2.MouseEnter:Connect(function() tw(MinBtn2,0.1,{BackgroundColor3=C.cardHov}) end)
+MinBtn2.MouseLeave:Connect(function() tw(MinBtn2,0.1,{BackgroundColor3=C.surface}) end)
 
-local MinBtn2 = makeIconBtn(TitleBar, -44, "–", C.surface, C.cardHov, C.textMid)
-
--- divider
-local Div = newFrame(Main, {
-    Size = UDim2.new(1, -32, 0, 1),
-    Position = UDim2.new(0, 16, 0, 60),
+-- Divider
+newFrame(Main, {
+    Size             = UDim2.new(1,-32,0,1),
+    Position         = UDim2.new(0,16,0,60),
     BackgroundColor3 = C.border,
-    ZIndex = 7,
+    ZIndex           = 9,
 })
 
 -- ══════════════════════════════════════════
 -- STATUS CARD
 -- ══════════════════════════════════════════
 local StatCard = Instance.new("Frame", Main)
-StatCard.Size             = UDim2.new(1, -32, 0, 36)
-StatCard.Position         = UDim2.new(0, 16, 0, 68)
+StatCard.Size             = UDim2.new(1,-32,0,34)
+StatCard.Position         = UDim2.new(0,16,0,68)
 StatCard.BackgroundColor3 = C.surface
 StatCard.BorderSizePixel  = 0
-StatCard.ZIndex           = 7
+StatCard.ZIndex           = 9
 corner(StatCard, 10)
 stroke(StatCard, C.border, 1)
 
--- pulsing left bar
 local StatAccent = newFrame(StatCard, {
-    Size = UDim2.new(0, 3, 0.6, 0),
-    Position = UDim2.new(0, 10, 0.2, 0),
+    Size             = UDim2.new(0,3,0.6,0),
+    Position         = UDim2.new(0,10,0.2,0),
     BackgroundColor3 = C.accent,
-    ZIndex = 8,
+    ZIndex           = 10,
 })
 corner(StatAccent, 2)
 
 local StatusLbl = newLabel(StatCard, {
-    Size = UDim2.new(1, -28, 1, 0),
-    Position = UDim2.new(0, 20, 0, 0),
-    Text = "⏳  Aguardando dados do player...",
-    TextColor3 = C.textDim,
-    TextSize = 11,
-    Font = Enum.Font.GothamMedium,
+    Size           = UDim2.new(1,-28,1,0),
+    Position       = UDim2.new(0,20,0,0),
+    Text           = "⏳  Aguardando dados do player...",
+    TextColor3     = C.textDim,
+    TextSize       = 11,
+    Font           = Enum.Font.GothamMedium,
     TextXAlignment = Enum.TextXAlignment.Left,
-    ZIndex = 8,
+    ZIndex         = 10,
 })
 
--- pulse the accent
 task.spawn(function()
     while true do
-        tween(StatAccent, 0.8, {BackgroundColor3 = C.accent})
-        task.wait(0.9)
-        tween(StatAccent, 0.8, {BackgroundColor3 = C.accentDim})
-        task.wait(0.9)
+        tw(StatAccent,0.8,{BackgroundColor3=C.accent})     task.wait(0.9)
+        tw(StatAccent,0.8,{BackgroundColor3=C.accentDim})  task.wait(0.9)
     end
 end)
 
 -- ══════════════════════════════════════════
--- SECTION LABEL
--- ══════════════════════════════════════════
-local function sectionLabel(parent, yOff, text)
-    local f = newFrame(parent, {
-        Size = UDim2.new(1, -32, 0, 16),
-        Position = UDim2.new(0, 16, 0, yOff),
-        ZIndex = 7,
-    })
-    local line1 = newFrame(f, { Size=UDim2.new(0,16,0,1), Position=UDim2.new(0,0,0.5,0), BackgroundColor3=C.border, ZIndex=8 })
-    local lbl   = newLabel(f, {
-        Size = UDim2.new(1,0,1,0),
-        Position = UDim2.new(0,22,0,0),
-        Text = text:upper(),
-        TextColor3 = C.textDim,
-        TextSize = 9,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 8,
-    })
-    local line2 = newFrame(f, { Size=UDim2.new(1,-80,0,1), Position=UDim2.new(0,80,0.5,0), BackgroundColor3=C.border, ZIndex=8 })
-end
-
--- ══════════════════════════════════════════
--- CONTENT SCROLL
+-- SCROLL FRAME
 -- ══════════════════════════════════════════
 local ScrollFrame = Instance.new("ScrollingFrame", Main)
-ScrollFrame.Size                = UDim2.new(1, -32, 1, -122)
-ScrollFrame.Position            = UDim2.new(0, 16, 0, 112)
+ScrollFrame.Size                  = UDim2.new(1,-32,1,-112)
+ScrollFrame.Position              = UDim2.new(0,16,0,108)
 ScrollFrame.BackgroundTransparency = 1
-ScrollFrame.BorderSizePixel     = 0
-ScrollFrame.ScrollBarThickness  = 3
-ScrollFrame.ScrollBarImageColor3 = C.accentDim
-ScrollFrame.CanvasSize          = UDim2.new(0,0,0,0)
-ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ScrollFrame.ZIndex              = 7
-ScrollFrame.Parent              = Main
+ScrollFrame.BorderSizePixel       = 0
+ScrollFrame.ScrollBarThickness    = 3
+ScrollFrame.ScrollBarImageColor3  = C.accentDim
+ScrollFrame.CanvasSize            = UDim2.new(0,0,0,0)
+ScrollFrame.AutomaticCanvasSize   = Enum.AutomaticSize.Y
+ScrollFrame.ZIndex                = 9
+
+-- FIX: ScrollingFrame precisa estar acima do ClipInner em ZIndex
+-- e o Main com ClipsDescendants=false para não cortar o input
+ScrollFrame.Parent = Main
 
 local ListLayout = Instance.new("UIListLayout", ScrollFrame)
-ListLayout.SortOrder   = Enum.SortOrder.LayoutOrder
-ListLayout.Padding     = UDim.new(0, 6)
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Padding   = UDim.new(0,6)
 
--- section header inside scroll
-local SectionAutomation = Instance.new("Frame", ScrollFrame)
-SectionAutomation.Size             = UDim2.new(1, 0, 0, 20)
-SectionAutomation.BackgroundTransparency = 1
-SectionAutomation.LayoutOrder      = 0
-local SecLbl = newLabel(SectionAutomation, {
-    Size = UDim2.new(1,0,1,0),
-    Text = "AUTOMAÇÕES",
-    TextColor3 = C.textDim,
-    TextSize = 9,
-    Font = Enum.Font.GothamBold,
-    TextXAlignment = Enum.TextXAlignment.Left,
-    ZIndex = 8,
+-- Section label
+local SecFrame = newFrame(ScrollFrame, {
+    Size      = UDim2.new(1,0,0,20),
+    ZIndex    = 9,
 })
-local SecLine = newFrame(SectionAutomation, {
-    Size = UDim2.new(1,0,0,1),
-    Position = UDim2.new(0,0,1,-1),
-    BackgroundColor3 = C.border,
-    ZIndex = 8,
+SecFrame.LayoutOrder = 0
+newFrame(SecFrame, { Size=UDim2.new(0,16,0,1), Position=UDim2.new(0,0,0.5,0), BackgroundColor3=C.border, ZIndex=10 })
+newLabel(SecFrame, {
+    Size=UDim2.new(1,0,1,0), Position=UDim2.new(0,22,0,0),
+    Text="AUTOMAÇÕES", TextColor3=C.textDim, TextSize=9,
+    Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=10
 })
+newFrame(SecFrame, { Size=UDim2.new(1,-80,0,1), Position=UDim2.new(0,80,0.5,0), BackgroundColor3=C.border, ZIndex=10 })
 
 -- ══════════════════════════════════════════
--- TOGGLE FACTORY (premium)
+-- TOGGLE FACTORY
 -- ══════════════════════════════════════════
 local function createToggle(cfg)
     local Card = Instance.new("TextButton", ScrollFrame)
     Card.Name             = cfg.name.."Card"
     Card.LayoutOrder      = cfg.order
-    Card.Size             = UDim2.new(1, 0, 0, 64)
+    Card.Size             = UDim2.new(1,0,0,64)
     Card.BackgroundColor3 = C.card
     Card.Text             = ""
     Card.AutoButtonColor  = false
     Card.BorderSizePixel  = 0
-    Card.ZIndex           = 8
+    Card.ZIndex           = 10
     corner(Card, 12)
     local cStroke = stroke(Card, C.border, 1.2)
 
-    -- left colored bar (hidden when off)
     local LeftBar = newFrame(Card, {
-        Size = UDim2.new(0, 3, 0.6, 0),
-        Position = UDim2.new(0, 0, 0.2, 0),
+        Size             = UDim2.new(0,3,0.6,0),
+        Position         = UDim2.new(0,0,0.2,0),
         BackgroundColor3 = C.accent,
-        ZIndex = 9,
+        ZIndex           = 11,
     })
     corner(LeftBar, 2)
     LeftBar.BackgroundTransparency = 1
 
-    -- icon bubble
     local IconBubble = Instance.new("Frame", Card)
-    IconBubble.Size             = UDim2.new(0, 40, 0, 40)
-    IconBubble.Position         = UDim2.new(0, 14, 0.5, -20)
+    IconBubble.Size             = UDim2.new(0,40,0,40)
+    IconBubble.Position         = UDim2.new(0,14,0.5,-20)
     IconBubble.BackgroundColor3 = C.surface
     IconBubble.BorderSizePixel  = 0
-    IconBubble.ZIndex           = 9
+    IconBubble.ZIndex           = 11
     corner(IconBubble, 10)
     local iBubStroke = stroke(IconBubble, C.border, 1)
+    newLabel(IconBubble, { Size=UDim2.new(1,0,1,0), Text=cfg.icon, TextSize=20, Font=Enum.Font.GothamBold, ZIndex=12 })
 
-    local IconL = newLabel(IconBubble, {
-        Size = UDim2.new(1,0,1,0),
-        Text = cfg.icon,
-        TextSize = 20,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 10,
-    })
-
-    -- text group
     local NameL = newLabel(Card, {
-        Size = UDim2.new(0.5, 0, 0, 20),
-        Position = UDim2.new(0, 62, 0.5, -22),
-        Text = cfg.label,
-        TextColor3 = C.text,
-        TextSize = 13,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 9,
+        Size=UDim2.new(0.5,0,0,20), Position=UDim2.new(0,62,0.5,-22),
+        Text=cfg.label, TextColor3=C.text, TextSize=13,
+        Font=Enum.Font.GothamBold, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=11,
     })
     local DescL = newLabel(Card, {
-        Size = UDim2.new(0.55, 0, 0, 14),
-        Position = UDim2.new(0, 62, 0.5, 0),
-        Text = cfg.desc,
-        TextColor3 = C.textDim,
-        TextSize = 10,
-        Font = Enum.Font.Gotham,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 9,
+        Size=UDim2.new(0.55,0,0,14), Position=UDim2.new(0,62,0.5,0),
+        Text=cfg.desc, TextColor3=C.textDim, TextSize=10,
+        Font=Enum.Font.Gotham, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=11,
     })
 
-    -- toggle pill (sliding dot style)
     local PillBg = Instance.new("Frame", Card)
-    PillBg.Size             = UDim2.new(0, 52, 0, 26)
-    PillBg.Position         = UDim2.new(1, -66, 0.5, -13)
+    PillBg.Size             = UDim2.new(0,52,0,26)
+    PillBg.Position         = UDim2.new(1,-66,0.5,-13)
     PillBg.BackgroundColor3 = C.redDim
     PillBg.BorderSizePixel  = 0
-    PillBg.ZIndex           = 9
+    PillBg.ZIndex           = 11
     corner(PillBg, 13)
     stroke(PillBg, C.border, 1)
 
     local PillDot = Instance.new("Frame", PillBg)
-    PillDot.Size             = UDim2.new(0, 18, 0, 18)
-    PillDot.Position         = UDim2.new(0, 4, 0.5, -9)
+    PillDot.Size             = UDim2.new(0,18,0,18)
+    PillDot.Position         = UDim2.new(0,4,0.5,-9)
     PillDot.BackgroundColor3 = C.red
     PillDot.BorderSizePixel  = 0
-    PillDot.ZIndex           = 10
+    PillDot.ZIndex           = 12
     corner(PillDot, 9)
 
     local PillLbl = newLabel(PillBg, {
-        Size = UDim2.new(0, 24, 1, 0),
-        Position = UDim2.new(1,-26,0,0),
-        Text = "OFF",
-        TextColor3 = C.red,
-        TextSize = 9,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 10,
+        Size=UDim2.new(0,24,1,0), Position=UDim2.new(1,-26,0,0),
+        Text="OFF", TextColor3=C.red, TextSize=9,
+        Font=Enum.Font.GothamBold, ZIndex=12,
     })
 
     local isOn = false
 
     local function setVisual(on)
         if on then
-            tween(Card,       0.25, {BackgroundColor3 = Color3.fromRGB(0, 28, 42)})
-            tween(cStroke,    0.25, {Color = C.borderAct})
-            tween(NameL,      0.2,  {TextColor3 = C.accent})
-            tween(DescL,      0.2,  {TextColor3 = C.accentDim})
-            tween(IconBubble, 0.2,  {BackgroundColor3 = C.accentDim})
-            tween(iBubStroke, 0.2,  {Color = C.accent})
-            tween(PillBg,     0.25, {BackgroundColor3 = C.greenDim})
-            tween(PillDot,    0.25, {BackgroundColor3 = C.green, Position = UDim2.new(1,-22,0.5,-9)})
-            tween(PillLbl,    0.2,  {TextColor3 = C.green, Position = UDim2.new(0,4,0,0)})
+            tw(Card,       0.25, {BackgroundColor3 = Color3.fromRGB(0,28,42)})
+            tw(cStroke,    0.25, {Color            = C.borderAct})
+            tw(NameL,      0.2,  {TextColor3       = C.accent})
+            tw(DescL,      0.2,  {TextColor3       = C.accentDim})
+            tw(IconBubble, 0.2,  {BackgroundColor3 = C.accentDim})
+            tw(iBubStroke, 0.2,  {Color            = C.accent})
+            tw(PillBg,     0.25, {BackgroundColor3 = C.greenDim})
+            tw(PillDot,    0.25, {BackgroundColor3 = C.green, Position=UDim2.new(1,-22,0.5,-9)})
+            tw(PillLbl,    0.2,  {TextColor3=C.green, Position=UDim2.new(0,4,0,0)})
             PillLbl.Text = "ON"
-            tween(LeftBar,    0.2,  {BackgroundTransparency = 0})
+            tw(LeftBar,    0.2,  {BackgroundTransparency=0})
         else
-            tween(Card,       0.25, {BackgroundColor3 = C.card})
-            tween(cStroke,    0.25, {Color = C.border})
-            tween(NameL,      0.2,  {TextColor3 = C.text})
-            tween(DescL,      0.2,  {TextColor3 = C.textDim})
-            tween(IconBubble, 0.2,  {BackgroundColor3 = C.surface})
-            tween(iBubStroke, 0.2,  {Color = C.border})
-            tween(PillBg,     0.25, {BackgroundColor3 = C.redDim})
-            tween(PillDot,    0.25, {BackgroundColor3 = C.red, Position = UDim2.new(0,4,0.5,-9)})
-            tween(PillLbl,    0.2,  {TextColor3 = C.red, Position = UDim2.new(1,-26,0,0)})
+            tw(Card,       0.25, {BackgroundColor3 = C.card})
+            tw(cStroke,    0.25, {Color            = C.border})
+            tw(NameL,      0.2,  {TextColor3       = C.text})
+            tw(DescL,      0.2,  {TextColor3       = C.textDim})
+            tw(IconBubble, 0.2,  {BackgroundColor3 = C.surface})
+            tw(iBubStroke, 0.2,  {Color            = C.border})
+            tw(PillBg,     0.25, {BackgroundColor3 = C.redDim})
+            tw(PillDot,    0.25, {BackgroundColor3 = C.red, Position=UDim2.new(0,4,0.5,-9)})
+            tw(PillLbl,    0.2,  {TextColor3=C.red, Position=UDim2.new(1,-26,0,0)})
             PillLbl.Text = "OFF"
-            tween(LeftBar,    0.2,  {BackgroundTransparency = 1})
+            tw(LeftBar,    0.2,  {BackgroundTransparency=1})
         end
     end
 
@@ -615,53 +496,53 @@ local function createToggle(cfg)
         isOn = not isOn
         _G[cfg.gvar] = isOn
         setVisual(isOn)
-        -- scale press effect
-        tween(Card, 0.08, {Size = UDim2.new(1,0,0,60)})
-        task.delay(0.1, function() tween(Card, 0.15, {Size = UDim2.new(1,0,0,64)}) end)
+        tw(Card, 0.08, {Size=UDim2.new(1,0,0,60)})
+        task.delay(0.1, function() tw(Card, 0.15, {Size=UDim2.new(1,0,0,64)}) end)
         if cfg.cb then cfg.cb(isOn) end
     end)
 
     Card.MouseEnter:Connect(function()
-        if not isOn then tween(Card, 0.15, {BackgroundColor3 = C.cardHov}) end
+        if not isOn then tw(Card,0.15,{BackgroundColor3=C.cardHov}) end
     end)
     Card.MouseLeave:Connect(function()
-        if not isOn then tween(Card, 0.15, {BackgroundColor3 = C.card}) end
+        if not isOn then tw(Card,0.15,{BackgroundColor3=C.card}) end
     end)
 end
 
-createToggle({ name="AutoRebirth",    icon="⚡", label="Auto Rebirth",     desc="Rebirth automático ao atingir Lv.25",         gvar="AutoRebirth",    order=1 })
-createToggle({ name="AutoAura",       icon="✨", label="Auto Aura",         desc="Compra e equipa a melhor Aura disponível",    gvar="AutoAura",       order=2 })
-createToggle({ name="AutoTrail",      icon="🌊", label="Auto Trail",        desc="Compra e equipa a melhor Trail disponível",   gvar="AutoTrail",      order=3 })
-createToggle({ name="AutoMonkeyTail", icon="🐒", label="Auto Monkey Tail",  desc="Compra e equipa a melhor Cauda de Macaco",    gvar="AutoMonkeyTail", order=4 })
-createToggle({ name="RemoteSpy",      icon="🔍", label="Remote Spy",        desc="Loga todos os Remotes no Console (F9)",       gvar="RemoteSpy",      order=5,
-    cb = function(s) if s then startSpy() else stopSpy() end end
-})
+createToggle({ name="AutoRebirth",    icon="⚡", label="Auto Rebirth",    desc="Rebirth automático ao atingir Lv.25",       gvar="AutoRebirth",    order=1 })
+createToggle({ name="AutoAura",       icon="✨", label="Auto Aura",        desc="Compra e equipa a melhor Aura disponível",  gvar="AutoAura",       order=2 })
+createToggle({ name="AutoTrail",      icon="🌊", label="Auto Trail",       desc="Compra e equipa a melhor Trail disponível", gvar="AutoTrail",      order=3 })
+createToggle({ name="AutoMonkeyTail", icon="🐒", label="Auto Monkey Tail", desc="Compra e equipa a melhor Cauda de Macaco",  gvar="AutoMonkeyTail", order=4 })
 
 -- ══════════════════════════════════════════
--- MINIMIZE / RESTORE (sem drift)
+-- MINIMIZE / RESTORE — sem drift, input correto
+-- Fix: Main.ClipsDescendants=false e usamos
+--      Main.Visible para esconder tudo junto
 -- ══════════════════════════════════════════
-local isMin   = false
+local isMin    = false
 local savedPos = Main.Position
 
 local function setMin(state)
     isMin = state
     if state then
         savedPos = Main.Position
-        tween(Main, 0.2, {
+        tw(Main, 0.2, {
             Size     = UDim2.new(0,0,0,0),
-            Position = UDim2.new(savedPos.X.Scale, savedPos.X.Offset+190, savedPos.Y.Scale, savedPos.Y.Offset+210)
+            Position = UDim2.new(savedPos.X.Scale, savedPos.X.Offset+190,
+                                 savedPos.Y.Scale, savedPos.Y.Offset+190)
         })
-        task.delay(0.2, function()
-            Main.Visible = false
-            MiniBtn.Position = UDim2.new(0, 20, savedPos.Y.Scale, savedPos.Y.Offset+90)
+        task.delay(0.21, function()
+            Main.Visible     = false
+            MiniBtn.Position = UDim2.new(0,20, savedPos.Y.Scale, savedPos.Y.Offset+80)
             MiniBtn.Visible  = true
         end)
     else
-        MiniBtn.Visible = false
-        Main.Visible    = true
-        Main.Size       = UDim2.new(0,0,0,0)
-        Main.Position   = UDim2.new(savedPos.X.Scale, savedPos.X.Offset+190, savedPos.Y.Scale, savedPos.Y.Offset+210)
-        tween(Main, 0.28, { Size = UDim2.new(0,380,0,420), Position = savedPos })
+        MiniBtn.Visible  = false
+        Main.Visible     = true
+        Main.Size        = UDim2.new(0,0,0,0)
+        Main.Position    = UDim2.new(savedPos.X.Scale, savedPos.X.Offset+190,
+                                     savedPos.Y.Scale, savedPos.Y.Offset+190)
+        tw(Main, 0.28, { Size=UDim2.new(0,380,0,380), Position=savedPos })
     end
 end
 
@@ -673,11 +554,11 @@ makeDraggable(TitleBar, Main)
 -- STATUS UPDATE
 -- ══════════════════════════════════════════
 local function fmt(n)
-    if n>=1e12 then return ("%.1fT"):format(n/1e12)
+    if     n>=1e12 then return ("%.1fT"):format(n/1e12)
     elseif n>=1e9  then return ("%.1fB"):format(n/1e9)
     elseif n>=1e6  then return ("%.1fM"):format(n/1e6)
     elseif n>=1e3  then return ("%.1fK"):format(n/1e3)
-    else return tostring(math.floor(n)) end
+    else                return tostring(math.floor(n)) end
 end
 
 local function updateStatus()
@@ -686,12 +567,12 @@ local function updateStatus()
     local lv  = data:FindFirstChild("Level")    and data.Level.Value    or 0
     local rb  = data:FindFirstChild("Rebirths") and data.Rebirths.Value or 0
     local win = data:FindFirstChild("Wins")     and data.Wins.Value     or 0
-    StatusLbl.Text = ("Lv.%d   ·   %d / %d Rebirths   ·   %s Wins"):format(lv, rb, MAX_REBIRTHS, fmt(win))
+    StatusLbl.Text      = ("Lv.%d   ·   %d/%d Rebirths   ·   %s Wins"):format(lv,rb,MAX_REBIRTHS,fmt(win))
     StatusLbl.TextColor3 = C.accent
 end
 
 -- ══════════════════════════════════════════
--- LÓGICA AUTO
+-- LÓGICAS AUTO
 -- ══════════════════════════════════════════
 local function autoRebirth()
     local d = LocalPlayer:FindFirstChild("Data"); if not d then return end
@@ -710,7 +591,7 @@ local function autoBuyEquip(cfg, dataKey, buyRemote, equipRemote, equippedKey)
     for name, c in pairs(cfg) do
         local owned = unlocked and unlocked:FindFirstChild(name) ~= nil
         if not owned and wins >= c.Price and c.Price > bestPrice then
-            bestPrice = c.Price ; bestBuy = name
+            bestPrice = c.Price; bestBuy = name
         end
     end
     if bestBuy then pcall(function() Remotes[buyRemote]:FireServer(bestBuy) end) task.wait(0.15) end
@@ -718,7 +599,7 @@ local function autoBuyEquip(cfg, dataKey, buyRemote, equipRemote, equippedKey)
     if unlocked then
         for _, child in ipairs(unlocked:GetChildren()) do
             local c = cfg[child.Name]
-            if c and c.Multi > bestMulti then bestMulti = c.Multi ; bestEquip = child.Name end
+            if c and c.Multi > bestMulti then bestMulti=c.Multi; bestEquip=child.Name end
         end
     end
     if bestEquip ~= "" and bestEquip ~= equipped then
@@ -740,4 +621,4 @@ task.spawn(function()
     end
 end)
 
-print("🔱 Titanium Hub v5 DEFINITIVE carregado!")
+print("🔱 Titanium Hub V2 carregado!")
